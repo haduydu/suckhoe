@@ -1,0 +1,95 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    // Check if the user is authenticated
+    function isAuthenticated() {
+       return request.auth != null;
+    }
+    
+    // Check if user owns the resource (for user-owned documents)
+    function isOwner(userId) {
+       return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Ensure uid field is not modified on update
+    function uidNotModified() {
+       return !('uid' in request.resource.data) ||
+         request.resource.data.uid == resource.data.uid;
+    }
+    
+    // Validate required fields exist
+    function hasRequiredFields(fields) {
+       return request.resource.data.keys().hasAll(fields);
+    }
+    
+    // Validate that the document contains only the allowed fields
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUserProfile(data) {
+      return hasOnlyAllowedFields(['name', 'height', 'weight', 'photoURL']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.height is number && data.height > 0 && data.height < 300 &&
+             data.weight is number && data.weight > 0 && data.weight < 500 &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000000));
+    }
+    
+    function isValidActivity(data) {
+      return hasOnlyAllowedFields(['name', 'type', 'date', 'duration', 'calories', 'status', 'iconName', 'colorClass', 'bgClass', 'timestamp']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 50 &&
+             data.date is string && data.date.size() > 0 && data.date.size() < 50 &&
+             data.duration is string && data.duration.size() > 0 && data.duration.size() < 50 &&
+             data.calories is number && data.calories >= 0 && data.calories < 10000 &&
+             data.status in ['Completed', 'Pending'] &&
+             data.iconName is string && data.iconName.size() > 0 && data.iconName.size() < 50 &&
+             data.colorClass is string && data.colorClass.size() > 0 && data.colorClass.size() < 50 &&
+             data.bgClass is string && data.bgClass.size() > 0 && data.bgClass.size() < 50 &&
+             (!('timestamp' in data) || data.timestamp == request.time || data.timestamp is timestamp);
+    }
+
+    function isValidNotification(data) {
+      return hasOnlyAllowedFields(['type', 'date', 'message', 'timestamp', 'read']) &&
+             data.type is string && data.type.size() > 0 && data.type.size() < 50 &&
+             data.date is string && data.date.size() > 0 && data.date.size() < 20 &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 500 &&
+             data.read is bool &&
+             (!('timestamp' in data) || data.timestamp == request.time || data.timestamp is timestamp);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow delete: if isOwner(userId);
+      
+      match /activities/{activityId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidActivity(request.resource.data);
+        allow update: if isOwner(userId) && isValidActivity(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidNotification(request.resource.data);
+        allow update: if isOwner(userId) && isValidNotification(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

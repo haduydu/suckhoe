@@ -1,0 +1,127 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information including physical stats",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User's full name"
+        },
+        "height": {
+          "type": "number",
+          "description": "User's height in cm"
+        },
+        "weight": {
+          "type": "number",
+          "description": "User's weight in kg"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User's profile picture URL"
+        }
+      },
+      "required": ["name", "height", "weight"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A logged fitness activity",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the activity"
+        },
+        "type": {
+          "type": "string",
+          "description": "Category of the activity"
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted date string"
+        },
+        "duration": {
+          "type": "string",
+          "description": "Duration and reps string"
+        },
+        "calories": {
+          "type": "number",
+          "description": "Calories burned"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Completed", "Pending"],
+          "description": "Status of the activity"
+        },
+        "iconName": {
+          "type": "string",
+          "description": "Lucide icon name"
+        },
+        "colorClass": {
+          "type": "string",
+          "description": "Tailwind color class"
+        },
+        "bgClass": {
+          "type": "string",
+          "description": "Tailwind background class"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp"
+        }
+      },
+      "required": ["name", "type", "date", "duration", "calories", "status", "iconName", "colorClass", "bgClass"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type of notification"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date string YYYY-MM-DD"
+        },
+        "message": {
+          "type": "string",
+          "description": "Notification message"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore server timestamp"
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Read status"
+        }
+      },
+      "required": ["type", "date", "message", "timestamp", "read"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "User profile documents"
+    },
+    "users/{userId}/activities/{activityId}": {
+      "schema": {
+        "$ref": "#/entities/Activity"
+      },
+      "description": "Activities logged by the user"
+    },
+    "users/{userId}/notifications/{notificationId}": {
+      "schema": {
+        "$ref": "#/entities/Notification"
+      },
+      "description": "User notifications"
+    }
+  }
+}

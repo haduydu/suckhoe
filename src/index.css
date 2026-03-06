@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #19f073;
+  --color-primary-hover: #14c05c;
+  
+  /* Light Mode (Green Theme - Default) */
+  --color-background-light: #102218;
+  --color-surface-light: #193424;
+  --color-border-light: #234832;
+  --color-text-light: #ffffff;
+  --color-text-muted-light: #91caa9;
+
+  /* Dark Mode (Gray/Black Theme) */
+  --color-background-dark: #09090b;
+  --color-surface-dark: #18181b;
+  --color-border-dark: #27272a;
+  --color-text-dark: #fafafa;
+  --color-text-muted-dark: #a1a1aa;
+  
+  --font-display: "Manrope", sans-serif;
+}
+
+body {
+  @apply font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark;
+}
