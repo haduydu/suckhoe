@@ -41,7 +41,7 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
              data.height is number && data.height > 0 && data.height < 300 &&
              data.weight is number && data.weight > 0 && data.weight < 500 &&
-             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 1000000));
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 6000000));
     }
     
     function isValidActivity(data) {
@@ -51,7 +51,7 @@ service cloud.firestore {
              data.date is string && data.date.size() > 0 && data.date.size() < 50 &&
              data.duration is string && data.duration.size() > 0 && data.duration.size() < 50 &&
              data.calories is number && data.calories >= 0 && data.calories < 10000 &&
-             data.status in ['Completed', 'Pending'] &&
+             data.status in ['Completed', 'Pending', 'Hoàn thành'] &&
              data.iconName is string && data.iconName.size() > 0 && data.iconName.size() < 50 &&
              data.colorClass is string && data.colorClass.size() > 0 && data.colorClass.size() < 50 &&
              data.bgClass is string && data.bgClass.size() > 0 && data.bgClass.size() < 50 &&

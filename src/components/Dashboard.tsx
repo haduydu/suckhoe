@@ -4,11 +4,12 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Activity as ActivityType, QuickLog, UserProfile } from '../types';
 import { User } from 'firebase/auth';
 import { logOut, db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, getDoc, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
 import AIChatWindow from './AIChatWindow';
 import confetti from 'canvas-confetti';
 import SettingsModal from './SettingsModal';
+import HistoryModal from './HistoryModal';
 
 
 
@@ -28,6 +29,16 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
   const [timeFilter, setTimeFilter] = useState<'day' | 'week' | 'month' | 'year'>('week');
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  const handleDeleteActivity = async (id: string) => {
+    if (!firebaseUser || !db) return;
+    try {
+      await deleteDoc(doc(db, 'users', firebaseUser.uid, 'activities', id));
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+    }
+  };
   const [notifications, setNotifications] = useState<any[]>([]);
 
   // Check for daily goal completion
@@ -172,7 +183,10 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
       
       switch (timeFilter) {
-        case 'day': return diffDays <= 1;
+        case 'day': 
+          return date.getDate() === now.getDate() && 
+                 date.getMonth() === now.getMonth() && 
+                 date.getFullYear() === now.getFullYear();
         case 'week': return diffDays <= 7;
         case 'month': return diffDays <= 30;
         case 'year': return diffDays <= 365;
@@ -187,7 +201,7 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
       .filter(a => a.name && a.name.toLowerCase().includes(activityName.toLowerCase()))
       .reduce((total, a) => {
         if (!a.duration) return total;
-        const match = a.duration.match(/\((\d+)\s*reps\)/i);
+        const match = a.duration.match(/\((\d+)\s*(?:reps|lần)\)/i);
         if (match && match[1]) {
           return total + parseInt(match[1], 10);
         }
@@ -436,6 +450,13 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
                 </button>
               </div>
             </div>
+            
+            <button 
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="mb-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Chi tiết lịch sử
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -628,6 +649,13 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
         onClose={() => setShowSettings(false)} 
         user={firebaseUser}
         userProfile={user}
+      />
+
+      <HistoryModal 
+        isOpen={isHistoryModalOpen} 
+        onClose={() => setIsHistoryModalOpen(false)} 
+        activities={activities} 
+        onDelete={handleDeleteActivity}
       />
     </div>
   );
