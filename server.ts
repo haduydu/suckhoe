@@ -1,10 +1,12 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import db from './server/db.js';
+import path from 'path';
+import db from './server/db.ts';
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
+  console.log(`Starting server with NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 
   app.use(express.json());
 
@@ -59,8 +61,18 @@ async function startServer() {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
+      base: './',
     });
     app.use(vite.middlewares);
+  } else {
+    // Serve static files from dist in production
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    
+    // Fallback to index.html for SPA routing
+    app.get('*', (req, res) => {
+      res.sendFile(path.resolve(distPath, 'index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
