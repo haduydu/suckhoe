@@ -7,7 +7,7 @@ export interface Activity {
   date: string;
   duration: string;
   calories: number;
-  status: 'Completed' | 'Pending';
+  status: 'Completed' | 'Pending' | 'Hoàn thành';
   iconName: string;
   colorClass: string;
   bgClass: string;
