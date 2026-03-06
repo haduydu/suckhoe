@@ -10,6 +10,7 @@ import AIChatWindow from './AIChatWindow';
 import confetti from 'canvas-confetti';
 import SettingsModal from './SettingsModal';
 import HistoryModal from './HistoryModal';
+import { parseActivityDate, formatDateForDisplay } from '../utils/dateUtils';
 
 
 
@@ -52,29 +53,7 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
 
       // Filter activities for today
       const todayActivities = activities.filter(a => {
-        let date;
-        if (a.timestamp && typeof a.timestamp.toDate === 'function') {
-          date = a.timestamp.toDate();
-        } else if (a.timestamp instanceof Date) {
-          date = a.timestamp;
-        } else if (a.timestamp) {
-          date = new Date(a.timestamp);
-        } else if (a.date) {
-          const parts = a.date.split(', ');
-          if (parts.length === 2) {
-            const [datePart, timePart] = parts[0].split('/'), [time, ampm] = parts[1].split(' ');
-            const [day, month, year] = datePart;
-            const [h, m] = time.split(':');
-            let hour = parseInt(h);
-            if (ampm === 'PM' && hour < 12) hour += 12;
-            if (ampm === 'AM' && hour === 12) hour = 0;
-            date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day), hour, parseInt(m));
-          } else {
-             date = new Date(a.date);
-          }
-        } else {
-          return false;
-        }
+        const date = parseActivityDate(a);
         
         if (!date || isNaN(date.getTime())) return false;
         date.setHours(0, 0, 0, 0);
@@ -151,33 +130,9 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
   const getFilteredActivities = () => {
     const now = new Date();
     return activities.filter(a => {
-      let date;
-      if (a.timestamp && typeof a.timestamp.toDate === 'function') {
-        date = a.timestamp.toDate();
-      } else if (a.timestamp instanceof Date) {
-        date = a.timestamp;
-      } else if (a.timestamp) {
-        date = new Date(a.timestamp);
-      } else if (a.date) {
-        // Try to parse DD/MM/YY, HH:MM AM/PM
-        const parts = a.date.split(', ');
-        if (parts.length === 2) {
-          const [datePart, timePart] = parts;
-          const [day, month, year] = datePart.split('/');
-          const [time, ampm] = timePart.split(' ');
-          const [hours, minutes] = time.split(':');
-          let h = parseInt(hours, 10);
-          if (ampm === 'PM' && h < 12) h += 12;
-          if (ampm === 'AM' && h === 12) h = 0;
-          date = new Date(2000 + parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), h, parseInt(minutes, 10));
-        } else {
-          date = new Date(a.date);
-        }
-      } else {
-        return true;
-      }
+      const date = parseActivityDate(a);
       
-      if (isNaN(date.getTime())) return false;
+      if (!date || isNaN(date.getTime())) return false;
       
       const diffTime = now.getTime() - date.getTime();
       const diffDays = diffTime / (1000 * 60 * 60 * 24);
@@ -263,28 +218,7 @@ export default function Dashboard({ user: firebaseUser, toggleTheme, isDarkMode 
     activities.forEach(a => {
       if (!a.calories || a.calories <= 0) return;
 
-      let date;
-      if (a.timestamp && typeof a.timestamp.toDate === 'function') {
-        date = a.timestamp.toDate();
-      } else if (a.timestamp instanceof Date) {
-        date = a.timestamp;
-      } else if (a.timestamp) {
-        date = new Date(a.timestamp);
-      } else if (a.date) {
-        const parts = a.date.split(', ');
-        if (parts.length === 2) {
-          const [datePart, timePart] = parts;
-          const [day, month, year] = datePart.split('/');
-          const [time, ampm] = timePart.split(' ');
-          const [h, m] = time.split(':');
-          let hour = parseInt(h);
-          if (ampm === 'PM' && hour < 12) hour += 12;
-          if (ampm === 'AM' && hour === 12) hour = 0;
-          date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day), hour, parseInt(m));
-        } else {
-           date = new Date(a.date);
-        }
-      }
+      const date = parseActivityDate(a);
 
       if (date && !isNaN(date.getTime())) {
         const day = String(date.getDate()).padStart(2, '0');
@@ -775,16 +709,7 @@ function QuickLogModal({ log, user, firebaseUser, onClose, onSave }: { log: Quic
       }
       
       const now = new Date();
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const year = String(now.getFullYear()).slice(-2);
-      let hours = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      const strHours = String(hours).padStart(2, '0');
-      const formattedDate = `${day}/${month}/${year}, ${strHours}:${minutes} ${ampm}`;
+      const formattedDate = formatDateForDisplay(now);
 
       const newActivityData = {
         name: log.name,

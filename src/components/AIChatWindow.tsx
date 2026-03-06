@@ -50,23 +50,23 @@ export default function AIChatWindow({ isOpen, onClose, userProfile, activities 
     setIsLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error('Missing Gemini API Key');
       }
 
       const ai = new GoogleGenAI({ apiKey });
 
-      // Prepare context
-      const context = `
+      // Prepare context/system instruction
+      const systemInstruction = `
 Bạn là "Trợ lý NuNu", một chuyên gia tư vấn sức khỏe và thể hình thân thiện, nhiệt tình.
 Thông tin người dùng:
 - Tên: ${userProfile?.name || 'Chưa cập nhật'}
 - Chiều cao: ${userProfile?.height ? userProfile.height + ' cm' : 'Chưa cập nhật'}
 - Cân nặng: ${userProfile?.weight ? userProfile.weight + ' kg' : 'Chưa cập nhật'}
 
-Lịch sử tập luyện của người dùng (từ mới nhất đến cũ nhất):
-${activities.length > 0 ? activities.map(a => `- Ngày: ${a.date}, Bài tập: ${a.name}, Loại: ${a.type}, Thời lượng/Reps: ${a.duration}, Calo tiêu thụ: ${a.calories} kcal, Trạng thái: ${a.status}`).join('\n') : 'Chưa có dữ liệu tập luyện.'}
+Lịch sử tập luyện của người dùng (từ mới nhất đến cũ nhất, tối đa 20 hoạt động gần đây):
+${activities.slice(0, 20).map(a => `- Ngày: ${a.date}, Bài tập: ${a.name}, Loại: ${a.type}, Thời lượng/Reps: ${a.duration}, Calo tiêu thụ: ${a.calories} kcal, Trạng thái: ${a.status}`).join('\n')}
 
 Hãy trả lời câu hỏi của người dùng dựa trên thông tin trên. Trả lời bằng tiếng Việt, thân thiện, ngắn gọn và súc tích. Nếu người dùng hỏi về lịch sử tập luyện, hãy phân tích dữ liệu trên để trả lời.
 `;
@@ -76,15 +76,16 @@ Hãy trả lời câu hỏi của người dùng dựa trên thông tin trên. T
         parts: [{ text: m.content }]
       }));
 
-      const response = await ai.models.generateContent({
+      // Use the chat API for better multi-turn handling
+      const chat = ai.chats.create({
         model: 'gemini-3-flash-preview',
-        contents: [
-          { role: 'user', parts: [{ text: context }] },
-          { role: 'model', parts: [{ text: 'Đã hiểu. Tôi sẽ đóng vai Trợ lý NuNu và sử dụng thông tin này để tư vấn.' }] },
-          ...chatHistory,
-          { role: 'user', parts: [{ text: userMessage.content }] }
-        ],
+        config: {
+          systemInstruction: systemInstruction,
+        },
+        history: chatHistory,
       });
+
+      const response = await chat.sendMessage({ message: userMessage.content });
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -93,12 +94,20 @@ Hãy trả lời câu hỏi của người dùng dựa trên thông tin trên. T
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error calling Gemini API:', error);
+      let errorMessage = 'Xin lỗi, đã có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại sau.';
+      
+      if (error?.message?.includes('API key not valid')) {
+        errorMessage = 'Lỗi: API Key không hợp lệ. Vui lòng kiểm tra cấu hình.';
+      } else if (error?.message?.includes('model not found')) {
+        errorMessage = 'Lỗi: Không tìm thấy mô hình AI phù hợp.';
+      }
+
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Xin lỗi, đã có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại sau.'
+        content: errorMessage
       }]);
     } finally {
       setIsLoading(false);
